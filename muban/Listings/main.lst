@@ -1,0 +1,217 @@
+C51 COMPILER V9.54   MAIN                                                                  02/17/2025 22:10:24 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: E:\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\main.lst) TA
+                    -BS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <stc15f2k60s2.h>
+   2          #include <intrins.h>
+   3          #include "Init.h"
+   4          #include "Key.h"
+   5          #include "Seg.h"
+   6          #include "LED.h"
+   7          #include "ds1302.h"
+   8          #include "iic.h"
+   9          #include "onewire.h"
+  10          #include "ultrasonic.h"
+  11          /* 基础变量创建区 */
+  12          unsigned int Slow_Down;                                                 //减速扫描专用
+  13          bit Key_Slow_Flag, Seg_Slow_Flag, LED_Slow_Flag, Infor_Slow_Flag,Distance_Slow_Flag;       //按键数码管LED
+             -信息处理减速标志位
+  14          unsigned char Seg_Buf[8] = {11, 1, 1, 1, 1, 1, 1, 1};            //数码管显示缓冲区
+  15          unsigned char Seg_Point[8] = {0, 1, 0, 0, 0, 0, 0, 0};                  //数码管小数点显示缓冲区
+  16          unsigned char LED_Buf[8] = {0, 0, 0, 0, 0, 0, 0, 0};                    //LED显示缓冲区
+  17          unsigned char i;                                                        //循环专用变量
+  18          unsigned int decimal_part;
+  19          unsigned int int_part;
+  20          /* 变量创建区 */
+  21          float temp; 
+  22          unsigned char rtc[3] = {12, 30, 0}; // 初始化时间为12:30:00
+  23          
+  24          /* 按键处理函数 */
+  25          void Key_Deal()
+  26          {
+  27   1          static unsigned char Key_New = 0, Key_Old = 0;    //按键获取
+  28   1          static unsigned char Key_UP = 0, Key_Down = 0;    //专用变量
+  29   1          
+  30   1          if (Key_Slow_Flag) return;                //减速
+  31   1          Key_Slow_Flag = 1;
+  32   1          
+  33   1          Key_New = Key_Read();                        //获取键码
+  34   1          Key_UP = ~Key_New & (Key_New ^ Key_Old);     //捕获上升沿
+  35   1          Key_Down = Key_New & (Key_New ^ Key_Old);    //捕获下降沿
+  36   1          Key_Old = Key_New;                           //辅助扫描
+  37   1          
+  38   1          switch (Key_Down)
+  39   1          {
+  40   2             
+  41   2               case 3:
+  42   2                 Seg_Buf[1]=2;
+  43   2              break;
+  44   2               case 4:
+  45   2                 Seg_Buf[3]=4;
+  46   2              break;
+  47   2          }
+  48   1      }
+  49           
+  50          /* 数码管处理函数 */
+  51          void Seg_Deal()
+  52          {
+  53   1       if(Seg_Slow_Flag) return;
+C51 COMPILER V9.54   MAIN                                                                  02/17/2025 22:10:24 PAGE 2   
+
+  54   1        Seg_Slow_Flag=1;
+  55   1        
+  56   1         temp=DS18B20_Read_T();
+  57   1        
+  58   1         int_part = (unsigned int)temp;  // 提取整数部分
+  59   1         decimal_part = (unsigned int)((temp - int_part) * 100);  // 提取小数部分
+  60   1      
+  61   1            Delay12us();
+  62   1          Seg_Buf[0] = int_part / 10;  // 十位
+  63   1          Seg_Buf[1] = int_part % 10;  // 个位
+  64   1          Seg_Buf[2] = decimal_part / 10;  // 十分位
+  65   1          Seg_Buf[3] = decimal_part % 10;  // 百分位
+  66   1          Delay12us();
+  67   1        DS1302_Read_Rtc(rtc);
+  68   1        
+  69   1        
+  70   1        
+  71   1        Seg_Buf[4] = rtc[1] / 10;
+  72   1        Seg_Buf[5] = rtc[1] % 10;
+  73   1        Seg_Buf[6] = rtc[2] / 10;
+  74   1          Seg_Buf[7] = rtc[2] % 10;
+  75   1        
+  76   1        Delay12us();
+  77   1        
+  78   1      
+  79   1      }
+  80           
+  81          /* LED处理函数 */
+  82          void LED_Deal()
+  83          {
+  84   1          if (LED_Slow_Flag) return;        //LED减速，可以不要，但题目如果出现流水灯之类的
+  85   1          LED_Slow_Flag = 1;                //大家灵活应变，把减速去掉
+  86   1          LED_Show(1,1);
+  87   1        LED_Show(3,1);
+  88   1        LED_Show(5,1);
+  89   1        LED_Show(7,1);
+  90   1      }
+  91           
+  92          /* 信息处理函数 */
+  93          void Infor_Deal()
+  94          {
+  95   1          /* 信息输出区 */
+  96   1       
+  97   1       
+  98   1          /* 减速 */
+  99   1          if (Infor_Slow_Flag) return;
+ 100   1          Infor_Slow_Flag = 1;
+ 101   1          
+ 102   1          /* 信息处理区 */
+ 103   1          
+ 104   1      }
+ 105           
+ 106          /* 定时器初始化函数 */
+ 107          void Timer1_Init(void)      //1毫秒@12.000MHz
+ 108          {
+ 109   1         
+ 110   1          TMOD &= 0x0F;       //设置定时器模式
+ 111   1          TL1 = 0x18;         //设置定时初值
+ 112   1          TH1 = 0xFC;         //设置定时初值
+ 113   1          TF1 = 0;            //清除TF1标志
+ 114   1          TR1 = 1;            //定时器1开始计时
+ 115   1          EA  = 1;
+C51 COMPILER V9.54   MAIN                                                                  02/17/2025 22:10:24 PAGE 3   
+
+ 116   1          ET1 = 1;
+ 117   1      }
+ 118           
+ 119          /* 中断服务函数 */
+ 120          void Timer1_Serve() interrupt 3
+ 121          {
+ 122   1        
+ 123   1      //    if(++chaoshengbo==10) distance=Uwave_Read();
+ 124   1          if (++Slow_Down == 400) Slow_Down = Infor_Slow_Flag = 0;
+ 125   1          if (Slow_Down % 10 == 0) Key_Slow_Flag = 0;
+ 126   1          if (Slow_Down % 20 == 0) LED_Slow_Flag = 0;
+ 127   1          if (Slow_Down % 100 == 0) Seg_Slow_Flag = 0;
+ 128   1         if (Slow_Down % 50 == 0)Distance_Slow_Flag=0;
+ 129   1          Seg_Show(Slow_Down%8, Seg_Buf[Slow_Down%8], Seg_Point[Slow_Down%8]);
+ 130   1          LED_Show(Slow_Down%8, LED_Buf[Slow_Down%8]);
+ 131   1          
+ 132   1      }
+ 133           //外部中断0初始化函数
+ 134          void IT0_Init(void)
+ 135          {
+ 136   1          EX0 = 1;    //开启外部中断0允许
+ 137   1          EA=1;       //开启中断总允许
+ 138   1          IT0=1;      //设置触发方式为下降沿触发，为0时触发方式为下降沿和上升沿都触发
+ 139   1          PX0 = 0;    //设置低优先级，为1时为高优先级
+ 140   1      }
+ 141          
+ 142          
+ 143          /* 主函数 */
+ 144          void main()
+ 145          {
+ 146   1          System_Init();
+ 147   1          Timer1_Init();
+ 148   1          IT0_Init();//外部中断
+ 149   1         DS1302_Write_Rtc(rtc);
+ 150   1        
+ 151   1          while (1)
+ 152   1          {
+ 153   2        
+ 154   2              Infor_Deal();
+ 155   2              Key_Deal();
+ 156   2              Seg_Deal();
+ 157   2              LED_Deal();
+ 158   2              Delay12us();
+ 159   2          
+ 160   2          }
+ 161   1            
+ 162   1      }
+ 163          
+ 164          /*void Time_Gone()//外部中断的触发事件，当满足条件时，P3模拟下降沿触发外部中断
+ 165          {
+ 166              unsigned char temp1 = rtc[2];
+ 167            Delay12us();
+ 168             
+ 169              if(temp1!=rtc[2])
+ 170              {
+ 171                  // 模拟下降沿触发外部中断
+ 172                  P3 &= 0xFE;  // P3.2拉低
+ 173                Delay12us();
+ 174                Delay12us();
+ 175                  P3 |= 0x01;  // P3.2拉高
+ 176              }
+ 177          }
+C51 COMPILER V9.54   MAIN                                                                  02/17/2025 22:10:24 PAGE 4   
+
+ 178          */
+ 179          void External_Hander0() interrupt 0
+ 180          {
+ 181   1          //函数内容
+ 182   1          LED_Show(0,1);//当满足外部中断的条件时，LED灯亮起
+ 183   1      }
+ 184          
+ 185          
+ 186          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    582    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     42    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      5    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,111 @@
+C51 COMPILER V9.54   LED                                                                   02/16/2025 11:06:28 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE LED
+OBJECT MODULE PLACED IN .\Objects\Led.obj
+COMPILER INVOKED BY: E:\C51\BIN\C51.EXE Led.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\Led.lst) TABS
+                    -(2) OBJECT(.\Objects\Led.obj)
+
+line level    source
+
+   1          
+   2          #include "Led.h"
+   3          #include <stc15f2k60s2.h>
+   4           
+   5          /* LEDÏÔÊ¾º¯Êý */
+   6          void LED_Show(unsigned char addr, enable)
+   7          {
+   8   1          static unsigned char temp_new_LED = 0x00;//È«ÁÁ 
+   9   1          static unsigned char temp_old_LED = 0xFF;//È«Ãð
+  10   1          
+  11   1          if (enable)
+  12   1              temp_new_LED |= 0x01 << addr; //ÏÈ°´Î»×óÒÆ£¬°Ñ×îÓÒ±ßµÄ1ÒÆµ½addrµÄÎ»ÖÃ£¬±ÈÈçaddr=0£¬Ôò»¹ÊÇÔÚ×îÓÒ±ß£
+             -»
+  13   1                                            //ÔÙ°´Î»Òì»ò£¬Ö»ÓÐ×îÓÒ±ßµÄ1±£ÁôÁËÏÂÀ´£»
+  14   1          else                              //temp_new±ä³ÉÁË0x01
+  15   1                                                    
+  16   1              temp_new_LED &= ~(0x01 << addr);
+  17   1          
+  18   1          if (temp_new_LED != temp_old_LED)
+  19   1          {
+  20   2            
+  21   2              P0 = ~temp_new_LED; //0xfe     1111 1110
+  22   2            
+  23   2              P2 = P2 & 0x1f | 0x80; // P2 Ïà¹ØµÄÕâ¼¸¶Î´úÂë¹²Í¬ÊµÏÖÁË½« P0 ¶Ë¿ÚµÄÊý¾ÝËø´æµ½ LED ¿ØÖÆ¶Ë¿ÚµÄ¹¦ÄÜ¡£
+  24   2      //0x1f 0001 1111                       //ÏÈ½«Êý¾Ý·Åµ½ P0 ¶Ë¿Ú£¬È»ºóÍ¨¹ýÉèÖÃ P2 ¶Ë¿ÚÑ¡ÔñºÏÊÊµÄËø´æÆ÷£¬ÈÃ P0
+             - Êý¾Ý´«Êä¹ýÈ¥£¬×îºó¹Ø±ÕËø´æÆ÷£¬
+  25   2            
+  26   2              P2 &= 0x1f;//100x xxxx & 0001 1111
+  27   2                        // ÓÖ°Ñ¸ßÈýÎ»¸øÇå³ýµôÁË£¬ÎÞÊÂ·¢Éú£¬°ÑLatchÖØÐÂËøºÃ
+  28   2              temp_old_LED = temp_new_LED;//temp_old=0x01¼ÇÂ¼ÏÂÀ´´ËÊ±LEDµÄ×´Ì¬£¬¼ì²âÏÂ´ÎÊÇ·ñÓÐ±ä»¯
+  29   2          }
+  30   1      }
+  31           
+  32           
+  33          /* ·äÃùÆ÷¼ÌµçÆ÷×¨ÓÃ */
+  34          unsigned char temp_new = 0x00;
+  35          unsigned char temp_old = 0xFF;
+  36           
+  37          //  0-¹Ø±Õ   1-¿ªÆô
+  38          /* ·äÃùÆ÷¿ØÖÆº¯Êý */   
+  39          void Beep(unsigned char flag)
+  40          {
+  41   1          if (flag)
+  42   1              temp_new |= 0x40;//0000 0000 | 0100 0000 =1000 0000
+  43   1          else
+  44   1              temp_new &= ~(0x40);//0100 0000 °´Î»È¡·´ 1011 1111 ÔÙ°´Î»& ÔòµÈÓÚ0000 0000 
+  45   1          
+  46   1          if (temp_new != temp_old)
+  47   1          {
+  48   2              P0 = temp_new;
+  49   2            
+  50   2              P2 = P2 & 0x1f | 0xa0;// Çå³ýµÍ5Î»£¬±£Áô¸ßÈýÎ»£¬0xa0=101       0 0000
+  51   2                                          //1010 0000
+  52   2                       
+C51 COMPILER V9.54   LED                                                                   02/16/2025 11:06:28 PAGE 2   
+
+  53   2              P2 &= 0x1f;                //0001
+  54   2            
+  55   2            
+  56   2              temp_old = temp_new;
+  57   2          }
+  58   1      }
+  59          /* ¼ÌµçÆ÷¿ØÖÆº¯Êý */
+  60          void Relay(unsigned char flag)//relay×÷Ãû´ÊÊ±£¬³ýÁË±íÊ¾¼ÌµçÆ÷£¬»¹ÓÐ½ÓÁ¦Èü¡¢½ÓÁ¦µÄÒ»ÈºÈË
+  61          {
+  62   1          if (flag)
+  63   1              temp_new |= 0x10; //0001 0000
+  64   1          else
+  65   1              temp_new &= ~(0x10);
+  66   1          
+  67   1          if (temp_new != temp_old)
+  68   1          {
+  69   2              P0 = temp_new;
+  70   2            
+  71   2            
+  72   2            
+  73   2              P2 = P2 & 0x1f | 0xa0;
+  74   2              P2 &= 0x1f;
+  75   2            
+  76   2            
+  77   2            
+  78   2            
+  79   2            
+  80   2          
+  81   2              temp_old = temp_new;
+  82   2          }
+  83   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    129    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      4    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
